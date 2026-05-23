@@ -1,6 +1,6 @@
 """cua-harness: agent-friendly Python SDK for cua-driver desktop automation."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.1"
 
 USAGE = """\
 Usage: cua-harness <<'PY'
@@ -20,6 +20,7 @@ Subcommands:
   --reload    Reload agent_helpers.py
 """
 
+from cua_harness.session import Session, get_session, set_default_session  # noqa: E402
 from cua_harness.client import ensure_daemon, daemon_alive, get_client, CuaClient, kill_daemon  # noqa: E402
 from cua_harness.helpers import (  # noqa: E402
     check_permissions,
@@ -53,11 +54,13 @@ from cua_harness.helpers import (  # noqa: E402
 )
 from cua_harness.wait import wait_for  # noqa: E402
 from cua_harness.diff import ax_diff, StateCapture  # noqa: E402
-from cua_harness.macro import start_recording, stop_recording, is_recording, replay  # noqa: E402
 from cua_harness.profiler import profile, get_profiler, Profiler  # noqa: E402
 from cua_harness.dryrun import set_dry_run, is_dry_run  # noqa: E402
 
 __all__ = [
+    "Session",
+    "get_session",
+    "set_default_session",
     "ensure_daemon",
     "daemon_alive",
     "kill_daemon",
@@ -94,10 +97,6 @@ __all__ = [
     "wait_for",
     "ax_diff",
     "StateCapture",
-    "start_recording",
-    "stop_recording",
-    "is_recording",
-    "replay",
     "profile",
     "get_profiler",
     "Profiler",

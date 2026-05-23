@@ -62,8 +62,8 @@ TCC cannot be granted interactively in headless CI. Options:
 ## Reset permissions (development)
 
 ```bash
-tccutil reset Accessibility com.example.cua-driver
-tccutil reset ScreenCapture com.example.cua-driver
+tccutil reset Accessibility /opt/homebrew/bin/cua-driver
+tccutil reset ScreenCapture /opt/homebrew/bin/cua-driver
 ```
 
-Replace `com.example.cua-driver` with the actual bundle identifier or binary path.
+Adjust the path if cua-driver is installed elsewhere (check with `which cua-driver`).

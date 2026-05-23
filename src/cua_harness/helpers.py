@@ -1,11 +1,10 @@
-"""Declarative tool wrappers over cua-driver socket IPC."""
+"""Tool wrappers over cua-driver, delegating to Session."""
 
 import atexit
 import tempfile
-import time
 from pathlib import Path
 
-from cua_harness.client import get_client
+from cua_harness.session import get_session
 
 _tmp_files: list[str] = []
 
@@ -30,52 +29,33 @@ def _tmp_png() -> str:
 
 
 def _cua(tool: str, *, screenshot_out: str | None = None, **kwargs) -> dict:
-    from cua_harness.dryrun import should_skip, log_skipped
-    from cua_harness.macro import record_call
-    from cua_harness.profiler import get_profiler
-
-    if should_skip(tool):
-        return log_skipped(tool, kwargs)
-
     if screenshot_out:
-        kwargs["screenshot_out_file"] = screenshot_out
-
-    t0 = time.monotonic()
-    result = get_client().call(tool, kwargs if kwargs else None)
-    elapsed_ms = (time.monotonic() - t0) * 1000
-
-    get_profiler().record(tool, elapsed_ms)
-    record_call(tool, kwargs, result)
-
-    if screenshot_out and Path(screenshot_out).exists():
-        result["image_path"] = screenshot_out
-    return result
+        return get_session().call(tool, screenshot_out=screenshot_out, **kwargs)
+    return get_session().call(tool, **kwargs)
 
 
-# --- Declarative tool definitions ---
-# Each tuple: (func_name, tool_name, required_params, optional_params, needs_image)
-# optional_params items: (param_name, default_value) or just param_name (default None)
-
-_TOOL_DEFS: list[tuple] = [
-    ("check_permissions", "check_permissions", [], [], False),
-    ("list_apps", "list_apps", [], [], False),
-    ("get_cursor_position", "get_cursor_position", [], [], False),
-    ("get_config", "get_config", [], [], False),
-    ("get_recording_state", "get_recording_state", [], [], False),
-    ("get_agent_cursor_state", "get_agent_cursor_state", [], [], False),
-]
+def check_permissions(**kwargs) -> dict:
+    return _cua("check_permissions", **kwargs)
 
 
-def _make_simple_tool(tool_name: str):
-    def tool_fn(**kwargs) -> dict:
-        return _cua(tool_name, **kwargs)
-    tool_fn.__name__ = tool_name
-    return tool_fn
+def list_apps(**kwargs) -> dict:
+    return _cua("list_apps", **kwargs)
 
 
-# Generate simple no-arg tools
-for _name, _tool, _, _, _ in _TOOL_DEFS:
-    globals()[_name] = _make_simple_tool(_tool)
+def get_cursor_position(**kwargs) -> dict:
+    return _cua("get_cursor_position", **kwargs)
+
+
+def get_config(**kwargs) -> dict:
+    return _cua("get_config", **kwargs)
+
+
+def get_recording_state(**kwargs) -> dict:
+    return _cua("get_recording_state", **kwargs)
+
+
+def get_agent_cursor_state(**kwargs) -> dict:
+    return _cua("get_agent_cursor_state", **kwargs)
 
 
 # --- Complex tools with image capture or special signatures ---

@@ -97,9 +97,9 @@ def daemon_alive() -> bool:
     return get_client().alive()
 
 
-def ensure_daemon() -> dict:
+def ensure_daemon() -> None:
     if daemon_alive():
-        return {"success": True}
+        return
     proc = subprocess.Popen(
         ["cua-driver", "serve"],
         stdout=subprocess.DEVNULL,

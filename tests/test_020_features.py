@@ -106,16 +106,26 @@ class TestAxDiff:
 class TestGetScreenSizeMultiDisplay:
     def test_no_display_id(self):
         from cua_harness.helpers import get_screen_size
-        with patch("cua_harness.helpers.get_client") as mock_client:
-            mock_client.return_value.call.return_value = {"width": 1920, "height": 1080}
+        from unittest.mock import MagicMock
+        from cua_harness.session import Session
+
+        mock_session = MagicMock(spec=Session)
+        mock_session.call.return_value = {"width": 1920, "height": 1080}
+
+        with patch("cua_harness.helpers.get_session", return_value=mock_session):
             result = get_screen_size()
-            mock_client.return_value.call.assert_called_once_with("get_screen_size", None)
+            mock_session.call.assert_called_once_with("get_screen_size")
             assert result == {"width": 1920, "height": 1080}
 
     def test_with_display_id(self):
         from cua_harness.helpers import get_screen_size
-        with patch("cua_harness.helpers.get_client") as mock_client:
-            mock_client.return_value.call.return_value = {"width": 2560, "height": 1440}
+        from unittest.mock import MagicMock
+        from cua_harness.session import Session
+
+        mock_session = MagicMock(spec=Session)
+        mock_session.call.return_value = {"width": 2560, "height": 1440}
+
+        with patch("cua_harness.helpers.get_session", return_value=mock_session):
             result = get_screen_size(display_id=2)
-            mock_client.return_value.call.assert_called_once_with("get_screen_size", {"display_id": 2})
+            mock_session.call.assert_called_once_with("get_screen_size", display_id=2)
             assert result == {"width": 2560, "height": 1440}

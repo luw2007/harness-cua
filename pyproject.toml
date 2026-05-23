@@ -4,6 +4,24 @@ version = "0.2.0"
 description = "Agent-friendly Python SDK for cua-driver desktop automation"
 requires-python = ">=3.11"
 dependencies = []
+license = {text = "MIT"}
+readme = "README.md"
+keywords = ["cua", "desktop-automation", "accessibility", "gui", "agent"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+    "Intended Audience :: Developers"
+]
+
+[project.urls]
+Homepage = "https://github.com/anthropics/cua-harness"
+Repository = "https://github.com/anthropics/cua-harness"
+Issues = "https://github.com/anthropics/cua-harness/issues"
 
 [project.scripts]
 cua-harness = "cua_harness.run:main"

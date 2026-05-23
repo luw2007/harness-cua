@@ -88,12 +88,14 @@ _global_profiler = Profiler()
 
 
 def get_profiler() -> Profiler:
-    return _global_profiler
+    from cua_harness.session import get_session
+    return get_session().profiler
 
 
 @contextmanager
 def profile():
-    p = _global_profiler
+    from cua_harness.session import get_session
+    p = get_session().profiler
     p.start()
     try:
         yield p
