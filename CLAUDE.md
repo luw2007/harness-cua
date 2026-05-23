@@ -28,11 +28,11 @@ macOS-only Python SDK (3.11+) that wraps [cua-driver](https://github.com/trycua/
 
 ### Layer stack (top → bottom)
 
-1. **`run.py`** — CLI entrypoint. Reads stdin heredoc, calls `ensure_daemon()`, exec's code with all helpers pre-imported. Also loads `agent-workspace/agent_helpers.py` extensions if present.
+1. **`run.py`** — CLI entrypoint. Reads stdin heredoc, calls `ensure_daemon()`, exec's code with all helpers pre-imported. Also loads `agent-workspace/agent_helpers.py` extensions if present. Also auto-loads all app-skills from `agent-workspace/app-skills/` into the exec namespace.
 
 2. **`helpers.py`** — 30+ tool wrapper functions (click, type_text, get_window_state, etc.). Each builds a kwargs dict and calls `_cua(tool_name, **kwargs)`. The `_cua` function delegates to `get_session().call()`. Also contains the app-skills subsystem: `_surface_app_skills()`, `save_app_skill()`, `load_app_skills()`.
 
-3. **`session.py`** — Central `Session` object holding: a `CuaClient` instance, a `Profiler`, macro recording state, and a dry-run flag. Every tool call flows through `Session.call()` which handles dry-run gating, timing for profiler, and trajectory recording. Module-level `get_session()` / `set_default_session()` manage the singleton.
+3. **`session.py`** — Central `Session` object holding: a `CuaClient` instance, a `Profiler`, macro recording state, and a dry-run flag. Every tool call flows through `Session.call()` which handles dry-run gating, timing for profiler, and trajectory recording. Module-level `get_session()` / `set_default_session()` manage the singleton. Also exports `set_dry_run`, `is_dry_run`, `get_profiler`, `profile` convenience functions.
 
 4. **`client.py`** — `CuaClient` class connecting to cua-driver daemon over Unix socket (`~/Library/Caches/cua-driver/cua-driver.sock`). Line-delimited JSON protocol: sends `{"method":"call","name":tool,"args":{...}}`, receives `{"ok":true,"result":{...}}`. Also contains `ensure_daemon()` and `kill_daemon()`.
 
@@ -40,7 +40,7 @@ macOS-only Python SDK (3.11+) that wraps [cua-driver](https://github.com/trycua/
 
 6. **`diff.py`** — `ax_diff(before, after)` for accessibility tree diffing; `StateCapture` context manager.
 
-7. **`dryrun.py` / `macro.py` / `profiler.py`** — Thin shims delegating to the default Session. Kept for backward-compat imports.
+7. **`profiler.py`** — `Profiler` and `ToolStats` data classes (pure data, no imports from session).
 
 ### App skills closed loop
 
@@ -49,17 +49,15 @@ The harness learns from successful operations and persists knowledge as executab
 ```
 agent-workspace/app-skills/
   <bundle_id>/
-    helpers.py              ← current callable functions
-    helpers.YYYYMMDD.bak.py ← version backups (max 5, oldest-first cleanup)
-    CHANGELOG.md            ← change log with reasons
+    helpers.py      ← current callable functions
+    helpers.prev.py ← single previous version backup
 ```
 
 **Lifecycle:**
-1. `get_window_state(pid)` with `CUA_APP_SKILLS=1` returns `app_skills` path if `helpers.py` exists for that bundle
-2. `load_app_skills(bundle_id, ns)` loads functions into a namespace for direct invocation
-3. `save_app_skill(bundle_id, code, reason)` writes new `helpers.py`, backs up the previous version, appends to changelog
-
-**Env gate:** `CUA_APP_SKILLS=1` enables surfacing. Saving always works regardless of env.
+1. `get_window_state(pid)` returns `app_skills` path by default if `helpers.py` exists for that bundle (no env var needed)
+2. `run.py` heredoc mode auto-loads all app-skills into the exec namespace
+3. `load_app_skills(bundle_id, ns)` loads functions and wraps with fallback (exception → warning + return None)
+4. `save_app_skill(bundle_id, code, reason)` writes new `helpers.py`, backs up previous as `helpers.prev.py`, reason written as file header comment
 
 ### Key design decisions
 

@@ -131,7 +131,7 @@ type_text(pid, "search query")
 | `save_app_skill(bundle_id, code, reason="")` | Persist learned Python helpers for an app |
 | `load_app_skills(bundle_id, ns)` | Load app's helpers.py into namespace |
 
-Set `CUA_APP_SKILLS=1` to enable surfacing — `get_window_state` returns `app_skills` path when a bundle has learned helpers.
+`get_window_state()` automatically returns `app_skills` path when a bundle has learned helpers. In heredoc CLI mode, all app-skills are auto-loaded into the namespace.
 
 ## Examples
 
@@ -215,7 +215,11 @@ def send_message(pid, window_id, element_index, text):
     press_key(pid, "Return")
 """, reason="learned message tab path via AXRadioButton")
 
-# Next session — load and call directly (zero LLM reasoning):
+# In heredoc CLI mode, app-skills are auto-loaded — call directly:
+#   open_messages(pid)
+#   send_message(pid, wid, idx, "hello")
+#
+# In library mode, load manually:
 ns = {}
 load_app_skills("com.electron.lark", ns)
 ns["open_messages"](pid)
