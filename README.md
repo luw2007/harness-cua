@@ -124,6 +124,15 @@ type_text(pid, "search query")
 | `start_recording()` / `stop_recording(path=)` | Macro record |
 | `replay(path, speed=1.0)` | Replay recorded trajectory |
 
+### App Skills (Learning Loop)
+
+| Function | Description |
+|----------|-------------|
+| `save_app_skill(bundle_id, code, reason="")` | Persist learned Python helpers for an app |
+| `load_app_skills(bundle_id, ns)` | Load app's helpers.py into namespace |
+
+Set `CUA_APP_SKILLS=1` to enable surfacing — `get_window_state` returns `app_skills` path when a bundle has learned helpers.
+
 ## Examples
 
 ### Wait for UI state
@@ -187,6 +196,33 @@ click(pid, element_index=5)       # logged to stderr, not executed
 get_window_state(pid)             # executes normally (read-only)
 set_dry_run(False)
 ```
+
+### App skills — learn and reuse
+
+```python
+from cua_harness import save_app_skill, load_app_skills
+
+# After successfully automating Lark, persist the helpers:
+save_app_skill("com.electron.lark", """
+from cua_harness import get_window_state, click, set_value, press_key
+
+def open_messages(pid):
+    state = get_window_state(pid, query="消息")
+    click(pid, element_index=0)
+
+def send_message(pid, window_id, element_index, text):
+    set_value(pid, window_id, element_index, text)
+    press_key(pid, "Return")
+""", reason="learned message tab path via AXRadioButton")
+
+# Next session — load and call directly (zero LLM reasoning):
+ns = {}
+load_app_skills("com.electron.lark", ns)
+ns["open_messages"](pid)
+ns["send_message"](pid, wid, idx, "hello")
+```
+
+Versioning: each save backs up the previous `helpers.py` as `helpers.YYYYMMDD.bak.py` (max 5 kept). Changes logged in `CHANGELOG.md` per bundle.
 
 ## Comparison
 
