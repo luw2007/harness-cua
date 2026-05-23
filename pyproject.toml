@@ -1,0 +1,16 @@
+[project]
+name = "cua-harness"
+version = "0.1.0"
+description = "Agent-friendly heredoc CLI wrapper for cua-driver desktop automation"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+cua-harness = "cua_harness.run:main"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
