@@ -1,34 +1,14 @@
 """Entry point: read stdin heredoc, ensure daemon, exec code."""
 
 import sys
+import traceback
 import importlib.util
 from pathlib import Path
 
-from cua_harness import __version__, USAGE
-from cua_harness.helpers import (
-    ensure_daemon,
-    daemon_alive,
-    check_permissions,
-    launch_app,
-    list_windows,
-    get_window_state,
-    click,
-    double_click,
-    right_click,
-    drag,
-    type_text,
-    set_value,
-    press_key,
-    hotkey,
-    scroll,
-    screenshot,
-    move_cursor,
-    get_cursor_position,
-    get_screen_size,
-    zoom,
-    page,
-    app_info,
-)
+from cua_harness import __version__, USAGE, __all__
+import cua_harness
+import cua_harness.helpers as _helpers
+from cua_harness.client import ensure_daemon, daemon_alive
 
 
 def _load_agent_helpers(ns: dict) -> None:
@@ -36,12 +16,15 @@ def _load_agent_helpers(ns: dict) -> None:
     helper_file = workspace / "agent_helpers.py"
     if not helper_file.exists():
         return
-    spec = importlib.util.spec_from_file_location("agent_helpers", helper_file)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    for name in dir(mod):
-        if not name.startswith("_"):
-            ns[name] = getattr(mod, name)
+    try:
+        spec = importlib.util.spec_from_file_location("agent_helpers", helper_file)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        for name in dir(mod):
+            if not name.startswith("_"):
+                ns[name] = getattr(mod, name)
+    except Exception as e:
+        print(f"Warning: failed to load agent_helpers.py: {e}", file=sys.stderr)
 
 
 def _doctor() -> None:
@@ -61,6 +44,13 @@ def _doctor() -> None:
         print("Start daemon with: cua-driver serve")
     except FileNotFoundError:
         print("cua-driver not found. Install: brew install anthropics/tap/cua-driver")
+
+
+def _build_namespace() -> dict:
+    ns: dict = {"__builtins__": __builtins__}
+    for name in __all__:
+        ns[name] = getattr(cua_harness, name)
+    return ns
 
 
 def main() -> None:
@@ -92,34 +82,14 @@ def main() -> None:
 
     ensure_daemon()
 
-    ns = {
-        "__builtins__": __builtins__,
-        "ensure_daemon": ensure_daemon,
-        "daemon_alive": daemon_alive,
-        "check_permissions": check_permissions,
-        "launch_app": launch_app,
-        "list_windows": list_windows,
-        "get_window_state": get_window_state,
-        "click": click,
-        "double_click": double_click,
-        "right_click": right_click,
-        "drag": drag,
-        "type_text": type_text,
-        "set_value": set_value,
-        "press_key": press_key,
-        "hotkey": hotkey,
-        "scroll": scroll,
-        "screenshot": screenshot,
-        "move_cursor": move_cursor,
-        "get_cursor_position": get_cursor_position,
-        "get_screen_size": get_screen_size,
-        "zoom": zoom,
-        "page": page,
-        "app_info": app_info,
-    }
-
+    ns = _build_namespace()
     _load_agent_helpers(ns)
-    exec(compile(code, "<stdin>", "exec"), ns)
+
+    try:
+        exec(compile(code, "<stdin>", "exec"), ns)
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
 
 
 if __name__ == "__main__":
