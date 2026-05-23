@@ -103,3 +103,45 @@ Direct socket IPC — no subprocess fork per call. Persistent connection reused 
 - One action per turn when unsure — snapshot to verify
 - Screenshots are window-local, not full-screen
 - Element indices change between snapshots — never cache them
+
+## App skills (opt-in)
+
+Set `CUA_APP_SKILLS=1` to enable. Off by default.
+
+When enabled, `get_window_state` returns `app_skills` pointing to `agent-workspace/app-skills/<bundle_id>/helpers.py`. Load it into your namespace with `load_app_skills(bundle_id, ns)` then call the functions directly — no LLM reasoning needed for known paths.
+
+After a successful operation that reveals non-obvious patterns, persist as Python code:
+
+```python
+save_app_skill("com.electron.lark", """
+from cua_harness import get_window_state, click, press_key, hotkey
+
+def open_messages(pid):
+    state = get_window_state(pid, query="消息")
+    click(pid, element_index=0)
+
+def send_message(pid, text):
+    from cua_harness import set_value
+    state = get_window_state(pid, query="AXTextArea")
+    set_value(pid, state["payload"]["structuredContent"]["windows"][0]["window_id"],
+              state["payload"]["structuredContent"]["elements"][0]["index"], text)
+    press_key(pid, "Return")
+""", reason="learned message input path via AXTextArea")
+```
+
+Versioning:
+- Each `save_app_skill` call backs up existing `helpers.py` as `helpers.YYYYMMDD.bak.py`
+- Max 5 backups retained (oldest deleted first)
+- Changes logged in `CHANGELOG.md`
+
+Directory structure:
+```
+agent-workspace/app-skills/
+  com.electron.lark/
+    helpers.py           ← current (callable functions)
+    helpers.20260523.bak.py
+    CHANGELOG.md
+  com.googlecode.iterm2/
+    helpers.py
+    CHANGELOG.md
+```

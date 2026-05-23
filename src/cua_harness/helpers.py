@@ -1,10 +1,14 @@
 """Tool wrappers over cua-driver, delegating to Session."""
 
 import atexit
+import os
 import tempfile
 from pathlib import Path
 
 from cua_harness.session import get_session
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+AGENT_WORKSPACE = Path(os.environ.get("CUA_AGENT_WORKSPACE", REPO_ROOT / "agent-workspace")).expanduser()
 
 _tmp_files: list[str] = []
 
@@ -88,7 +92,7 @@ def launch_app(
 
 
 def list_windows(pid: int) -> dict:
-    return _cua("list_windows", pid=pid)
+    return _surface_app_skills(_cua("list_windows", pid=pid))
 
 
 def get_window_state(
@@ -104,7 +108,7 @@ def get_window_state(
         kwargs["query"] = query
     needs_image = capture_mode in ("vision", "screenshot")
     out_file = _tmp_png() if needs_image else None
-    return _cua("get_window_state", screenshot_out=out_file, **kwargs)
+    return _surface_app_skills(_cua("get_window_state", screenshot_out=out_file, **kwargs))
 
 
 def click(
@@ -324,6 +328,91 @@ def set_agent_cursor_enabled(enabled: bool) -> dict:
 
 def replay_trajectory(dir: str) -> dict:
     return _cua("replay_trajectory", dir=dir)
+
+
+# --- App skills surfacing and persistence ---
+
+_MAX_BACKUPS = 5
+
+
+def _extract_bundle_id(result: dict) -> str | None:
+    sc = result.get("payload", {}).get("structuredContent")
+    if isinstance(sc, dict):
+        return sc.get("bundle_id")
+    return None
+
+
+def _surface_app_skills(result: dict) -> dict:
+    if os.environ.get("CUA_APP_SKILLS") != "1":
+        return result
+    bundle_id = _extract_bundle_id(result)
+    if not bundle_id:
+        return result
+    skills_dir = AGENT_WORKSPACE / "app-skills" / bundle_id
+    if not skills_dir.is_dir():
+        return result
+    helpers_file = skills_dir / "helpers.py"
+    if helpers_file.exists():
+        result["app_skills"] = str(helpers_file)
+    return result
+
+
+def load_app_skills(bundle_id: str, ns: dict) -> bool:
+    """Load app-skills/<bundle_id>/helpers.py into the given namespace. Returns True if loaded."""
+    import importlib.util
+    skills_dir = AGENT_WORKSPACE / "app-skills" / bundle_id
+    helpers_file = skills_dir / "helpers.py"
+    if not helpers_file.exists():
+        return False
+    spec = importlib.util.spec_from_file_location(f"app_skills.{bundle_id}", helpers_file)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    for name in dir(mod):
+        if not name.startswith("_"):
+            ns[name] = getattr(mod, name)
+    return True
+
+
+def _rotate_backups(skills_dir: Path) -> None:
+    """Keep at most _MAX_BACKUPS .bak.py files, delete oldest first."""
+    baks = sorted(skills_dir.glob("helpers.*.bak.py"))
+    while len(baks) > _MAX_BACKUPS:
+        baks.pop(0).unlink()
+
+
+def save_app_skill(bundle_id: str, code: str, reason: str = "") -> str:
+    """Persist a learned app skill as Python code.
+
+    - Backs up existing helpers.py as helpers.YYYYMMDD.bak.py
+    - Writes new helpers.py
+    - Appends to CHANGELOG.md
+    - Rotates backups beyond 5
+    """
+    from datetime import date
+    skills_dir = AGENT_WORKSPACE / "app-skills" / bundle_id
+    skills_dir.mkdir(parents=True, exist_ok=True)
+    helpers_file = skills_dir / "helpers.py"
+    today = date.today().strftime("%Y%m%d")
+
+    if helpers_file.exists():
+        bak_name = f"helpers.{today}.bak.py"
+        # Append counter if same-day backup exists
+        bak_path = skills_dir / bak_name
+        counter = 1
+        while bak_path.exists():
+            counter += 1
+            bak_path = skills_dir / f"helpers.{today}_{counter}.bak.py"
+        helpers_file.rename(bak_path)
+
+    helpers_file.write_text(code)
+    _rotate_backups(skills_dir)
+
+    changelog = skills_dir / "CHANGELOG.md"
+    entry = f"## {today}\n{reason}\n\n" if reason else f"## {today}\nUpdated helpers.py\n\n"
+    existing = changelog.read_text() if changelog.exists() else ""
+    changelog.write_text(entry + existing)
+
+    return str(helpers_file)
 
 
 # Backward compat alias
