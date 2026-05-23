@@ -7,8 +7,7 @@ from pathlib import Path
 
 from cua_harness import __version__, USAGE, __all__
 import cua_harness
-import cua_harness.helpers as _helpers
-from cua_harness.client import ensure_daemon, daemon_alive
+from cua_harness.client import ensure_daemon, kill_daemon
 
 
 def _load_agent_helpers(ns: dict) -> None:
@@ -39,11 +38,15 @@ def _doctor() -> None:
             timeout=15,
         )
         print(result.stdout.strip() if result.stdout else result.stderr.strip())
+        if result.returncode != 0:
+            sys.exit(1)
     except subprocess.TimeoutExpired:
         print("cua-driver doctor timed out — daemon likely not running.")
         print("Start daemon with: cua-driver serve")
+        sys.exit(1)
     except FileNotFoundError:
         print("cua-driver not found. Install: brew install anthropics/tap/cua-driver")
+        sys.exit(1)
 
 
 def _build_namespace() -> dict:
@@ -69,7 +72,9 @@ def main() -> None:
         return
 
     if "--reload" in args:
-        print("Reload: agent_helpers.py will be re-imported on next exec.")
+        kill_daemon()
+        ensure_daemon()
+        print("Daemon restarted.")
         return
 
     if sys.stdin.isatty():

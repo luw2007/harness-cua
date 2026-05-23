@@ -97,9 +97,9 @@ def daemon_alive() -> bool:
     return get_client().alive()
 
 
-def ensure_daemon() -> None:
+def ensure_daemon() -> dict:
     if daemon_alive():
-        return
+        return {"success": True}
     proc = subprocess.Popen(
         ["cua-driver", "serve"],
         stdout=subprocess.DEVNULL,
@@ -122,3 +122,11 @@ def ensure_daemon() -> None:
         msg += f"\nstderr: {stderr}"
     print(msg, file=sys.stderr)
     raise RuntimeError(msg)
+
+
+def kill_daemon() -> None:
+    subprocess.run(["cua-driver", "kill"], capture_output=True, timeout=5)
+    global _default_client
+    if _default_client:
+        _default_client.close()
+        _default_client = None

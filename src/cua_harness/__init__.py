@@ -1,6 +1,6 @@
 """cua-harness: agent-friendly Python SDK for cua-driver desktop automation."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 USAGE = """\
 Usage: cua-harness <<'PY'
@@ -20,7 +20,7 @@ Subcommands:
   --reload    Reload agent_helpers.py
 """
 
-from cua_harness.client import ensure_daemon, daemon_alive, get_client, CuaClient  # noqa: E402
+from cua_harness.client import ensure_daemon, daemon_alive, get_client, CuaClient, kill_daemon  # noqa: E402
 from cua_harness.helpers import (  # noqa: E402
     check_permissions,
     launch_app,
@@ -51,10 +51,16 @@ from cua_harness.helpers import (  # noqa: E402
     get_agent_cursor_state,
     replay_trajectory,
 )
+from cua_harness.wait import wait_for  # noqa: E402
+from cua_harness.diff import ax_diff, StateCapture  # noqa: E402
+from cua_harness.macro import start_recording, stop_recording, is_recording, replay  # noqa: E402
+from cua_harness.profiler import profile, get_profiler, Profiler  # noqa: E402
+from cua_harness.dryrun import set_dry_run, is_dry_run  # noqa: E402
 
 __all__ = [
     "ensure_daemon",
     "daemon_alive",
+    "kill_daemon",
     "get_client",
     "CuaClient",
     "check_permissions",
@@ -85,4 +91,16 @@ __all__ = [
     "get_recording_state",
     "get_agent_cursor_state",
     "replay_trajectory",
+    "wait_for",
+    "ax_diff",
+    "StateCapture",
+    "start_recording",
+    "stop_recording",
+    "is_recording",
+    "replay",
+    "profile",
+    "get_profiler",
+    "Profiler",
+    "set_dry_run",
+    "is_dry_run",
 ]

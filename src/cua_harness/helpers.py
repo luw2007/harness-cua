@@ -2,9 +2,10 @@
 
 import atexit
 import tempfile
+import time
 from pathlib import Path
 
-from cua_harness.client import get_client, ensure_daemon, daemon_alive
+from cua_harness.client import get_client
 
 _tmp_files: list[str] = []
 
@@ -29,9 +30,23 @@ def _tmp_png() -> str:
 
 
 def _cua(tool: str, *, screenshot_out: str | None = None, **kwargs) -> dict:
+    from cua_harness.dryrun import should_skip, log_skipped
+    from cua_harness.macro import record_call
+    from cua_harness.profiler import get_profiler
+
+    if should_skip(tool):
+        return log_skipped(tool, kwargs)
+
     if screenshot_out:
         kwargs["screenshot_out_file"] = screenshot_out
+
+    t0 = time.monotonic()
     result = get_client().call(tool, kwargs if kwargs else None)
+    elapsed_ms = (time.monotonic() - t0) * 1000
+
+    get_profiler().record(tool, elapsed_ms)
+    record_call(tool, kwargs, result)
+
     if screenshot_out and Path(screenshot_out).exists():
         result["image_path"] = screenshot_out
     return result
@@ -45,7 +60,6 @@ _TOOL_DEFS: list[tuple] = [
     ("check_permissions", "check_permissions", [], [], False),
     ("list_apps", "list_apps", [], [], False),
     ("get_cursor_position", "get_cursor_position", [], [], False),
-    ("get_screen_size", "get_screen_size", [], [], False),
     ("get_config", "get_config", [], [], False),
     ("get_recording_state", "get_recording_state", [], [], False),
     ("get_agent_cursor_state", "get_agent_cursor_state", [], [], False),
@@ -66,8 +80,26 @@ for _name, _tool, _, _, _ in _TOOL_DEFS:
 
 # --- Complex tools with image capture or special signatures ---
 
-def launch_app(bundle_id: str, urls: list[str] | None = None, electron_debugging_port: int | None = None) -> dict:
-    kwargs: dict = {"bundle_id": bundle_id}
+def get_screen_size(display_id: int | None = None) -> dict:
+    kwargs: dict = {}
+    if display_id is not None:
+        kwargs["display_id"] = display_id
+    return _cua("get_screen_size", **kwargs)
+
+
+def launch_app(
+    bundle_id: str | None = None,
+    name: str | None = None,
+    urls: list[str] | None = None,
+    electron_debugging_port: int | None = None,
+) -> dict:
+    if not bundle_id and not name:
+        raise ValueError("launch_app requires bundle_id or name")
+    kwargs: dict = {}
+    if bundle_id:
+        kwargs["bundle_id"] = bundle_id
+    if name:
+        kwargs["name"] = name
     if urls:
         kwargs["urls"] = urls
     if electron_debugging_port is not None:
