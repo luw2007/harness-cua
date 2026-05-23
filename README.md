@@ -8,7 +8,7 @@ Agent-friendly Python SDK for desktop automation via [cua-driver](https://github
 
 ## Install
 
-Prerequisites: [cua-driver](https://github.com/trycua/cua) installed (`brew install trycua/tap/cua` or see upstream docs).
+Prerequisites: [cua-driver](https://github.com/trycua/cua) installed and on PATH.
 
 ```bash
 pip install cua-harness
@@ -29,7 +29,7 @@ pip install -e .
 ```bash
 cua-harness <<'PY'
 result = launch_app("com.apple.Safari")
-pid = result["data"]["pid"]
+pid = result["pid"]
 state = get_window_state(pid, capture_mode="som")
 click(pid, element_index=5)
 type_text(pid, "hello world")
@@ -39,36 +39,181 @@ PY
 ### Library
 
 ```python
-from cua_harness import click, type_text, get_window_state, ensure_daemon
+from cua_harness import ensure_daemon, launch_app, get_window_state, click, type_text
 
 ensure_daemon()
-state = get_window_state(pid, capture_mode="ax")
+app = launch_app("com.apple.Safari")
+pid = app["pid"]
+state = get_window_state(pid)
 click(pid, element_index=3)
 type_text(pid, "search query")
 ```
 
-## Features
+## Architecture
 
-- **30+ tool wrappers** -- click, type_text, press_key, scroll, screenshot, get_window_state, drag, launch_app, and more
-- **wait_for(predicate, timeout)** -- polling helper that blocks until a condition is met or times out
-- **ax_diff()** -- diff accessibility tree snapshots to detect UI state changes
-- **Multi-display** -- `get_screen_size(display_id=)` for multi-monitor setups
-- **Macro record/replay** -- capture and replay interaction sequences
-- **Performance profiler** -- per-tool latency statistics
-- **Dry-run mode** -- mutations logged but not executed (for testing agent plans)
-- **Socket IPC** -- communicates with cua-driver daemon over Unix socket, no subprocess shelling
+```
+┌─────────────────────────────────────────────────┐
+│  Agent Code (heredoc / library / framework)     │
+└────────────────────┬────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────┐
+│  cua_harness.helpers                            │
+│  30+ tool wrappers: click, type_text, scroll…   │
+└────────────────────┬────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────┐
+│  cua_harness.session                            │
+│  Profiler · Macro Recorder · Dry-run Gate       │
+└────────────────────┬────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────┐
+│  cua_harness.client (Unix socket IPC)           │
+│  Line-delimited JSON protocol                   │
+└────────────────────┬────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────┐
+│  cua-driver daemon                              │
+│  macOS Accessibility + Screen Capture APIs       │
+└─────────────────────────────────────────────────┘
+```
+
+## API Reference
+
+### App & Window
+
+| Function | Description |
+|----------|-------------|
+| `ensure_daemon()` | Start cua-driver daemon if not running |
+| `launch_app(bundle_id=, name=)` | Launch app by bundle ID or name |
+| `list_apps()` | List running applications |
+| `list_windows(pid)` | List windows for a process |
+| `get_window_state(pid, capture_mode="som")` | Get AX tree / screenshot |
+
+### Input
+
+| Function | Description |
+|----------|-------------|
+| `click(pid, element_index=, x=, y=, count=)` | Click element or coordinates |
+| `double_click(pid, element_index=)` | Double-click |
+| `right_click(pid, element_index=)` | Right-click |
+| `type_text(pid, text, delay_ms=)` | Type text into focused element |
+| `press_key(pid, key, modifiers=)` | Press keyboard key |
+| `hotkey(pid, keys)` | Press key combination |
+| `set_value(pid, window_id, element_index, value)` | Set element value directly |
+
+### Navigation
+
+| Function | Description |
+|----------|-------------|
+| `scroll(pid, direction, amount=3)` | Scroll in direction |
+| `drag(pid, from_x, from_y, to_x, to_y)` | Drag gesture |
+| `move_cursor(x, y)` | Move mouse cursor |
+| `get_cursor_position()` | Get current cursor position |
+| `get_screen_size(display_id=)` | Screen dimensions (multi-monitor) |
+| `zoom(pid, x, y, width, height)` | Capture zoomed region |
+
+### Observability
+
+| Function | Description |
+|----------|-------------|
+| `wait_for(predicate, timeout=10)` | Poll until condition met |
+| `ax_diff(before, after)` | Diff two AX tree snapshots |
+| `StateCapture(pid)` | Context manager for before/after diff |
+| `set_dry_run(enabled)` | Toggle dry-run mode |
+| `profile()` | Context manager for latency profiling |
+| `start_recording()` / `stop_recording(path=)` | Macro record |
+| `replay(path, speed=1.0)` | Replay recorded trajectory |
+
+## Examples
+
+### Wait for UI state
+
+```python
+from cua_harness import wait_for, get_window_state
+
+def dialog_appeared():
+    state = get_window_state(pid)
+    return any(e.get("role") == "dialog" for e in state.get("elements", []))
+
+wait_for(dialog_appeared, timeout=5, message="dialog did not appear")
+```
+
+### AX tree diff
+
+```python
+from cua_harness import get_window_state, ax_diff, click
+
+before = get_window_state(pid)
+click(pid, element_index=7)
+after = get_window_state(pid)
+
+diff = ax_diff(before, after)
+print(diff["summary"])  # "+2 -0 ~1"
+```
+
+### Macro record and replay
+
+```python
+from cua_harness import start_recording, stop_recording, replay, click, type_text
+
+start_recording()
+click(pid, element_index=3)
+type_text(pid, "automated input")
+stop_recording("my_macro.json")
+
+# Later:
+replay("my_macro.json", speed=2.0)
+```
+
+### Performance profiling
+
+```python
+from cua_harness import profile, click, get_window_state
+
+with profile() as p:
+    for i in range(10):
+        get_window_state(pid)
+        click(pid, element_index=i)
+# Prints: tool name, call count, avg/min/max latency
+```
+
+### Dry-run mode
+
+```python
+from cua_harness import set_dry_run, click, get_window_state
+
+set_dry_run(True)
+click(pid, element_index=5)       # logged to stderr, not executed
+get_window_state(pid)             # executes normally (read-only)
+set_dry_run(False)
+```
+
+## Comparison
+
+| Feature | cua-harness | pyautogui | osascript | Playwright |
+|---------|:-----------:|:---------:|:---------:|:----------:|
+| Accessibility tree | yes | no | partial | no (web only) |
+| Element-based targeting | yes | no | partial | yes (web) |
+| No foreground steal | yes | no | yes | n/a |
+| Multi-display | yes | partial | no | n/a |
+| Dry-run mode | yes | no | no | no |
+| Performance profiler | yes | no | no | yes |
+| Macro record/replay | yes | no | no | yes |
+| Agent-friendly API | yes | no | no | partial |
+| Platform | macOS | cross | macOS | cross (web) |
 
 ## Permissions
 
-macOS requires Accessibility and Screen Recording entitlements via TCC (Transparency, Consent, and Control). Grant access to your terminal emulator in System Settings > Privacy & Security.
+macOS requires Accessibility and Screen Recording permissions via TCC. Grant access to your terminal in System Settings > Privacy & Security.
 
 See [docs/tcc-permissions.md](docs/tcc-permissions.md) for detailed setup.
 
 ## Contributing
 
-Issues and pull requests welcome. Run the test suite before submitting:
+Issues and pull requests welcome.
 
 ```bash
+pip install -e .
 pytest
 ```
 

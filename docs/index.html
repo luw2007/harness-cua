@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cua-harness — Agent-friendly desktop automation SDK</title>
+<meta name="description" content="Python SDK for AI agents to control macOS desktop apps through Accessibility APIs">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--green:#3fb950;--purple:#bc8cff}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.container{max-width:960px;margin:0 auto;padding:0 24px}
+
+/* Hero */
+.hero{text-align:center;padding:80px 24px 60px}
+.hero h1{font-size:3rem;font-weight:700;margin-bottom:12px}
+.hero h1 span{color:var(--accent)}
+.hero p{font-size:1.25rem;color:var(--muted);max-width:600px;margin:0 auto 32px}
+.badges{display:flex;gap:8px;justify-content:center;margin-bottom:32px}
+.badges img{height:20px}
+.cta{display:inline-flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.cta a{padding:10px 24px;border-radius:6px;font-weight:600;font-size:0.95rem}
+.cta .primary{background:var(--accent);color:#fff}
+.cta .primary:hover{background:#79c0ff;text-decoration:none}
+.cta .secondary{border:1px solid var(--border);color:var(--text)}
+.cta .secondary:hover{border-color:var(--accent);text-decoration:none}
+
+/* Sections */
+section{padding:60px 0}
+section h2{font-size:1.75rem;font-weight:600;margin-bottom:24px;text-align:center}
+.section-sub{color:var(--muted);text-align:center;margin-top:-16px;margin-bottom:32px}
+
+/* Features grid */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.feature{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px}
+.feature h3{font-size:1.1rem;margin-bottom:8px;color:var(--green)}
+.feature p{color:var(--muted);font-size:0.9rem}
+
+/* Code block */
+.code-block{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;overflow-x:auto;position:relative;margin:0 auto;max-width:700px}
+.code-block pre{margin:0;font-size:0.85rem;line-height:1.7}
+.copy-btn{position:absolute;top:12px;right:12px;background:var(--border);border:none;color:var(--muted);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.75rem}
+.copy-btn:hover{color:var(--text);background:#444}
+
+/* Architecture */
+.arch{display:flex;flex-direction:column;align-items:center;gap:0}
+.arch-layer{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 32px;text-align:center;width:100%;max-width:500px}
+.arch-layer strong{color:var(--accent)}
+.arch-layer small{color:var(--muted);display:block;font-size:0.8rem}
+.arch-arrow{color:var(--muted);font-size:1.5rem;line-height:1.2}
+
+/* Install */
+.install-cmd{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px 24px;font-family:monospace;font-size:1rem;text-align:center;margin:0 auto;max-width:400px}
+
+/* Footer */
+footer{border-top:1px solid var(--border);padding:40px 24px;text-align:center;color:var(--muted);font-size:0.85rem}
+footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1><span>cua</span>-harness</h1>
+  <p>Agent-friendly Python SDK for desktop automation. Control macOS apps through Accessibility APIs without stealing foreground focus.</p>
+  <div class="badges">
+    <img src="https://img.shields.io/badge/platform-macOS-lightgrey" alt="macOS">
+    <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+">
+    <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT">
+  </div>
+  <div class="cta">
+    <a href="https://github.com/anthropics/cua-harness" class="primary">GitHub</a>
+    <a href="#install" class="secondary">Get Started</a>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <h2>Features</h2>
+    <div class="features">
+      <div class="feature">
+        <h3>30+ Tool Wrappers</h3>
+        <p>click, type_text, press_key, scroll, screenshot, get_window_state, drag, launch_app and more — all through element indices or coordinates.</p>
+      </div>
+      <div class="feature">
+        <h3>wait_for()</h3>
+        <p>Poll until a UI condition is met. Composable with any predicate function. Configurable timeout and interval.</p>
+      </div>
+      <div class="feature">
+        <h3>AX Tree Diff</h3>
+        <p>Capture two accessibility snapshots and get a structured diff of added, removed, and changed elements.</p>
+      </div>
+      <div class="feature">
+        <h3>Macro Record / Replay</h3>
+        <p>Record interaction sequences to JSON trajectories. Replay at configurable speed for regression testing.</p>
+      </div>
+      <div class="feature">
+        <h3>Performance Profiler</h3>
+        <p>Automatic per-tool latency tracking. Call counts, avg/min/max stats. Zero-config — wired into every call.</p>
+      </div>
+      <div class="feature">
+        <h3>Dry-Run Mode</h3>
+        <p>Toggle mutations off globally. Read-only tools still execute. Perfect for testing agent plans safely.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="container">
+    <h2>Install</h2>
+    <p class="section-sub">Requires <a href="https://github.com/trycua/cua">cua-driver</a> on PATH</p>
+    <div class="install-cmd">pip install cua-harness</div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2>Quick Start</h2>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre><code class="language-python">from cua_harness import ensure_daemon, launch_app, get_window_state, click, type_text
+
+ensure_daemon()
+
+app = launch_app("com.apple.Safari")
+pid = app["pid"]
+
+state = get_window_state(pid, capture_mode="som")
+click(pid, element_index=5)
+type_text(pid, "hello from cua-harness")</code></pre>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2>Architecture</h2>
+    <div class="arch">
+      <div class="arch-layer"><strong>Agent Code</strong><small>Heredoc CLI / Library / Framework adapter</small></div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-layer"><strong>helpers</strong><small>30+ typed tool wrappers</small></div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-layer"><strong>session</strong><small>Profiler · Recorder · Dry-run gate</small></div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-layer"><strong>client</strong><small>Unix socket IPC, line-delimited JSON</small></div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-layer"><strong>cua-driver</strong><small>macOS Accessibility + Screen Capture</small></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>MIT License &copy; 2025 cua-harness contributors</p>
+    <p><a href="https://github.com/anthropics/cua-harness">GitHub</a> · <a href="https://github.com/trycua/cua">cua-driver</a></p>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script>
+hljs.highlightAll();
+function copyCode(btn){
+  const code=btn.parentElement.querySelector('code').textContent;
+  navigator.clipboard.writeText(code);
+  btn.textContent='Copied!';
+  setTimeout(()=>btn.textContent='Copy',1500);
+}
+</script>
+</body>
+</html>
