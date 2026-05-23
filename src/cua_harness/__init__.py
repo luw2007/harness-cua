@@ -20,7 +20,10 @@ Subcommands:
   --reload    Reload agent_helpers.py
 """
 
-from cua_harness.session import Session, get_session, set_default_session  # noqa: E402
+from cua_harness.session import (  # noqa: E402
+    Session, get_session, set_default_session,
+    set_dry_run, is_dry_run, profile, get_profiler,
+)
 from cua_harness.client import ensure_daemon, daemon_alive, get_client, CuaClient, kill_daemon  # noqa: E402
 from cua_harness.helpers import (  # noqa: E402
     check_permissions,
@@ -56,8 +59,7 @@ from cua_harness.helpers import (  # noqa: E402
 )
 from cua_harness.wait import wait_for  # noqa: E402
 from cua_harness.diff import ax_diff, StateCapture  # noqa: E402
-from cua_harness.profiler import profile, get_profiler, Profiler  # noqa: E402
-from cua_harness.dryrun import set_dry_run, is_dry_run  # noqa: E402
+from cua_harness.profiler import Profiler  # noqa: E402
 
 __all__ = [
     "Session",

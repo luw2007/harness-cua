@@ -1,7 +1,6 @@
 """Performance profiler for cua-harness tool calls."""
 
 import time
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 
 
@@ -82,23 +81,3 @@ class Profiler:
         for name, s in r["tools"].items():
             print(f"{name:<25} {s['calls']:>5} {s['total_ms']:>7.1f}ms {s['avg_ms']:>6.1f}ms {s['min_ms']:>6.1f}ms {s['max_ms']:>6.1f}ms")
         print()
-
-
-_global_profiler = Profiler()
-
-
-def get_profiler() -> Profiler:
-    from cua_harness.session import get_session
-    return get_session().profiler
-
-
-@contextmanager
-def profile():
-    from cua_harness.session import get_session
-    p = get_session().profiler
-    p.start()
-    try:
-        yield p
-    finally:
-        p.stop()
-        p.print_report()

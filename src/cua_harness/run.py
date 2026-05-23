@@ -8,6 +8,19 @@ from pathlib import Path
 from cua_harness import __version__, USAGE, __all__
 import cua_harness
 from cua_harness.client import ensure_daemon, kill_daemon
+from cua_harness.helpers import AGENT_WORKSPACE, load_app_skills
+
+
+def _load_all_app_skills(ns: dict) -> None:
+    skills_root = AGENT_WORKSPACE / "app-skills"
+    if not skills_root.is_dir():
+        return
+    for entry in sorted(skills_root.iterdir()):
+        if entry.is_dir() and (entry / "helpers.py").exists():
+            try:
+                load_app_skills(entry.name, ns)
+            except Exception as e:
+                print(f"Warning: failed to load app-skill {entry.name}: {e}", file=sys.stderr)
 
 
 def _load_agent_helpers(ns: dict) -> None:
@@ -89,6 +102,7 @@ def main() -> None:
 
     ns = _build_namespace()
     _load_agent_helpers(ns)
+    _load_all_app_skills(ns)
 
     try:
         exec(compile(code, "<stdin>", "exec"), ns)

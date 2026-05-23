@@ -9,7 +9,8 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from cua_harness.session import Session
-from cua_harness.profiler import Profiler, get_profiler, profile
+from cua_harness.profiler import Profiler
+from cua_harness.session import get_profiler, profile
 
 
 def _mock_session(dry_run: bool = False) -> Session:
@@ -127,8 +128,8 @@ class TestProfiler:
 class TestDryRun:
     def test_toggle(self):
         s = _mock_session()
-        with patch("cua_harness.dryrun.get_session", return_value=s):
-            from cua_harness.dryrun import set_dry_run, is_dry_run
+        with patch("cua_harness.session.get_session", return_value=s):
+            from cua_harness.session import set_dry_run, is_dry_run
             assert not is_dry_run()
             set_dry_run(True)
             assert is_dry_run()

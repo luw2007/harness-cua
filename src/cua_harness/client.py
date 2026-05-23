@@ -36,15 +36,17 @@ class CuaClient:
             self._sock = None
 
     def _send(self, request: dict, timeout: float = CALL_TIMEOUT) -> dict:
-        sock = self._connect()
-        sock.settimeout(timeout)
-        line = json.dumps(request, separators=(",", ":")) + "\n"
-        try:
-            sock.sendall(line.encode())
-            return self._read_response(sock)
-        except (OSError, ConnectionError):
-            self._disconnect()
-            raise
+        for attempt in range(2):
+            sock = self._connect()
+            sock.settimeout(timeout)
+            line = json.dumps(request, separators=(",", ":")) + "\n"
+            try:
+                sock.sendall(line.encode())
+                return self._read_response(sock)
+            except (OSError, ConnectionError):
+                self._disconnect()
+                if attempt == 1:
+                    raise
 
     def _read_response(self, sock: socket.socket) -> dict:
         buf = b""
@@ -100,28 +102,35 @@ def daemon_alive() -> bool:
 def ensure_daemon() -> None:
     if daemon_alive():
         return
-    proc = subprocess.Popen(
-        ["cua-driver", "serve"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    for _ in range(20):
-        time.sleep(0.25)
-        if daemon_alive():
-            return
-    stderr = ""
-    try:
-        _, err = proc.communicate(timeout=1)
-        if err:
-            stderr = err.strip()
-    except Exception:
-        pass
-    msg = "Failed to start cua-driver daemon within 5s"
-    if stderr:
-        msg += f"\nstderr: {stderr}"
-    print(msg, file=sys.stderr)
-    raise RuntimeError(msg)
+    for attempt in range(2):
+        proc = subprocess.Popen(
+            ["cua-driver", "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        for _ in range(20):
+            time.sleep(0.25)
+            if daemon_alive():
+                return
+        stderr = ""
+        try:
+            _, err = proc.communicate(timeout=1)
+            if err:
+                stderr = err.strip()
+        except Exception:
+            pass
+        if attempt == 0 and "address already in use" in stderr.lower():
+            try:
+                SOCKET_PATH.unlink()
+            except OSError:
+                pass
+            continue
+        msg = "Failed to start cua-driver daemon within 5s"
+        if stderr:
+            msg += f"\nstderr: {stderr}"
+        print(msg, file=sys.stderr)
+        raise RuntimeError(msg)
 
 
 def kill_daemon() -> None:
@@ -130,3 +139,7 @@ def kill_daemon() -> None:
     if _default_client:
         _default_client.close()
         _default_client = None
+    try:
+        SOCKET_PATH.unlink()
+    except OSError:
+        pass

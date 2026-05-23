@@ -1,6 +1,5 @@
 """Tests for app-skills surfacing, persistence, versioning and loading."""
 
-import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -31,7 +30,7 @@ def open_messages(pid):
 
 
 class TestSurfaceAppSkills:
-    def test_surfaces_helpers_py_when_enabled(self, _patch_workspace):
+    def test_surfaces_helpers_py(self, _patch_workspace):
         ws = _patch_workspace
         bundle = "com.googlecode.iterm2"
         skill_dir = ws / "app-skills" / bundle
@@ -43,33 +42,15 @@ class TestSurfaceAppSkills:
         result = {
             "payload": {"structuredContent": {"bundle_id": bundle, "tree_markdown": "..."}}
         }
-        with patch.dict(os.environ, {"CUA_APP_SKILLS": "1"}):
-            out = _surface_app_skills(result)
+        out = _surface_app_skills(result)
 
         assert out["app_skills"] == str(skill_dir / "helpers.py")
-
-    def test_no_surfacing_when_disabled(self, _patch_workspace):
-        ws = _patch_workspace
-        bundle = "com.googlecode.iterm2"
-        skill_dir = ws / "app-skills" / bundle
-        skill_dir.mkdir(parents=True)
-        (skill_dir / "helpers.py").write_text("def hello(): pass")
-
-        from cua_harness.helpers import _surface_app_skills
-
-        result = {"payload": {"structuredContent": {"bundle_id": bundle}}}
-        with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("CUA_APP_SKILLS", None)
-            out = _surface_app_skills(result)
-
-        assert "app_skills" not in out
 
     def test_no_surfacing_when_no_dir(self, _patch_workspace):
         from cua_harness.helpers import _surface_app_skills
 
         result = {"payload": {"structuredContent": {"bundle_id": "com.nonexistent.app"}}}
-        with patch.dict(os.environ, {"CUA_APP_SKILLS": "1"}):
-            out = _surface_app_skills(result)
+        out = _surface_app_skills(result)
 
         assert "app_skills" not in out
 
@@ -77,8 +58,7 @@ class TestSurfaceAppSkills:
         from cua_harness.helpers import _surface_app_skills
 
         result = {"payload": {"content": [{"text": "hello"}]}}
-        with patch.dict(os.environ, {"CUA_APP_SKILLS": "1"}):
-            out = _surface_app_skills(result)
+        out = _surface_app_skills(result)
 
         assert "app_skills" not in out
 
@@ -92,8 +72,7 @@ class TestSurfaceAppSkills:
         from cua_harness.helpers import _surface_app_skills
 
         result = {"payload": {"structuredContent": {"bundle_id": bundle}}}
-        with patch.dict(os.environ, {"CUA_APP_SKILLS": "1"}):
-            out = _surface_app_skills(result)
+        out = _surface_app_skills(result)
 
         assert "app_skills" not in out
 
@@ -117,44 +96,31 @@ class TestSaveAppSkill:
         save_app_skill("com.test.app", "# v2\ndef v2(): pass", reason="added v2")
 
         skill_dir = ws / "app-skills" / "com.test.app"
-        baks = list(skill_dir.glob("helpers.*.bak.py"))
-        assert len(baks) == 1
-        assert "v1" in baks[0].read_text()
+        prev = skill_dir / "helpers.prev.py"
+        assert prev.exists()
+        assert "v1" in prev.read_text()
         assert "v2" in (skill_dir / "helpers.py").read_text()
 
-    def test_changelog_written(self, _patch_workspace):
+    def test_reason_in_header(self, _patch_workspace):
         ws = _patch_workspace
         from cua_harness.helpers import save_app_skill
 
         save_app_skill("com.test.app", SAMPLE_CODE, reason="learned message path")
-        changelog = ws / "app-skills" / "com.test.app" / "CHANGELOG.md"
-        assert changelog.exists()
-        assert "learned message path" in changelog.read_text()
+        helpers = ws / "app-skills" / "com.test.app" / "helpers.py"
+        assert "# reason: learned message path" in helpers.read_text()
 
-    def test_max_5_backups(self, _patch_workspace):
+    def test_prev_overwritten_on_multiple_saves(self, _patch_workspace):
         ws = _patch_workspace
         from cua_harness.helpers import save_app_skill
 
-        for i in range(7):
-            save_app_skill("com.test.app", f"# v{i}\ndef v{i}(): pass")
+        save_app_skill("com.test.app", "# v1\ndef v1(): pass")
+        save_app_skill("com.test.app", "# v2\ndef v2(): pass")
+        save_app_skill("com.test.app", "# v3\ndef v3(): pass")
 
         skill_dir = ws / "app-skills" / "com.test.app"
-        baks = list(skill_dir.glob("helpers.*.bak.py"))
-        assert len(baks) == 5
-
-    def test_same_day_multiple_backups(self, _patch_workspace):
-        from cua_harness.helpers import save_app_skill
-
-        save_app_skill("com.test.app", "# v1")
-        save_app_skill("com.test.app", "# v2")
-        save_app_skill("com.test.app", "# v3")
-
-        ws = _patch_workspace
-        skill_dir = ws / "app-skills" / "com.test.app"
-        baks = sorted(skill_dir.glob("helpers.*.bak.py"))
-        assert len(baks) == 2
-        assert "v1" in baks[0].read_text()
-        assert "v2" in baks[1].read_text()
+        prev = skill_dir / "helpers.prev.py"
+        assert "v2" in prev.read_text()
+        assert "v3" in (skill_dir / "helpers.py").read_text()
 
 
 class TestLoadAppSkills:

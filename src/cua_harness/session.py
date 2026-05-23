@@ -3,6 +3,7 @@
 import json
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -108,3 +109,26 @@ def get_session() -> Session:
 def set_default_session(session: Session) -> None:
     global _default
     _default = session
+
+
+def set_dry_run(enabled: bool) -> None:
+    get_session().dry_run = enabled
+
+
+def is_dry_run() -> bool:
+    return get_session().dry_run
+
+
+def get_profiler() -> Profiler:
+    return get_session().profiler
+
+
+@contextmanager
+def profile():
+    p = get_session().profiler
+    p.start()
+    try:
+        yield p
+    finally:
+        p.stop()
+        p.print_report()

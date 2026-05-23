@@ -332,8 +332,6 @@ def replay_trajectory(dir: str) -> dict:
 
 # --- App skills surfacing and persistence ---
 
-_MAX_BACKUPS = 5
-
 
 def _extract_bundle_id(result: dict) -> str | None:
     sc = result.get("payload", {}).get("structuredContent")
@@ -343,8 +341,6 @@ def _extract_bundle_id(result: dict) -> str | None:
 
 
 def _surface_app_skills(result: dict) -> dict:
-    if os.environ.get("CUA_APP_SKILLS") != "1":
-        return result
     bundle_id = _extract_bundle_id(result)
     if not bundle_id:
         return result
@@ -359,6 +355,7 @@ def _surface_app_skills(result: dict) -> dict:
 
 def load_app_skills(bundle_id: str, ns: dict) -> bool:
     """Load app-skills/<bundle_id>/helpers.py into the given namespace. Returns True if loaded."""
+    import functools
     import importlib.util
     skills_dir = AGENT_WORKSPACE / "app-skills" / bundle_id
     helpers_file = skills_dir / "helpers.py"
@@ -369,48 +366,41 @@ def load_app_skills(bundle_id: str, ns: dict) -> bool:
     spec.loader.exec_module(mod)
     for name in dir(mod):
         if not name.startswith("_"):
-            ns[name] = getattr(mod, name)
+            attr = getattr(mod, name)
+            if callable(attr):
+                ns[name] = _wrap_with_fallback(attr, bundle_id, name)
+            else:
+                ns[name] = attr
     return True
 
 
-def _rotate_backups(skills_dir: Path) -> None:
-    """Keep at most _MAX_BACKUPS .bak.py files, delete oldest first."""
-    baks = sorted(skills_dir.glob("helpers.*.bak.py"))
-    while len(baks) > _MAX_BACKUPS:
-        baks.pop(0).unlink()
+def _wrap_with_fallback(fn, bundle_id, name):
+    import functools
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            import sys
+            print(f"[app-skill fallback] {bundle_id}.{name}() failed: {e}", file=sys.stderr)
+            print(f"[app-skill fallback] skill may be outdated — consider re-recording", file=sys.stderr)
+            return None
+    return wrapper
 
 
 def save_app_skill(bundle_id: str, code: str, reason: str = "") -> str:
-    """Persist a learned app skill as Python code.
-
-    - Backs up existing helpers.py as helpers.YYYYMMDD.bak.py
-    - Writes new helpers.py
-    - Appends to CHANGELOG.md
-    - Rotates backups beyond 5
-    """
-    from datetime import date
+    """Persist a learned app skill as Python code. Keeps one .prev.py backup."""
     skills_dir = AGENT_WORKSPACE / "app-skills" / bundle_id
     skills_dir.mkdir(parents=True, exist_ok=True)
     helpers_file = skills_dir / "helpers.py"
-    today = date.today().strftime("%Y%m%d")
 
     if helpers_file.exists():
-        bak_name = f"helpers.{today}.bak.py"
-        # Append counter if same-day backup exists
-        bak_path = skills_dir / bak_name
-        counter = 1
-        while bak_path.exists():
-            counter += 1
-            bak_path = skills_dir / f"helpers.{today}_{counter}.bak.py"
-        helpers_file.rename(bak_path)
+        prev = skills_dir / "helpers.prev.py"
+        prev.write_bytes(helpers_file.read_bytes())
 
-    helpers_file.write_text(code)
-    _rotate_backups(skills_dir)
-
-    changelog = skills_dir / "CHANGELOG.md"
-    entry = f"## {today}\n{reason}\n\n" if reason else f"## {today}\nUpdated helpers.py\n\n"
-    existing = changelog.read_text() if changelog.exists() else ""
-    changelog.write_text(entry + existing)
+    header = f"# reason: {reason}\n" if reason else ""
+    helpers_file.write_text(header + code)
 
     return str(helpers_file)
 
