@@ -1,261 +1,132 @@
 # cua-harness
 
-Agent-friendly Python SDK for desktop automation via [cua-driver](https://github.com/trycua/cua).
+macOS-only Python SDK wrapping [cua-driver](https://github.com/trycua/cua) for AI agent desktop automation.
 
 ![macOS only](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
+**Features:** structuredContent auto-unwrap, smart window selection, app-skills closed-loop learning.
 
 ## Install
 
 Prerequisites: [cua-driver](https://github.com/trycua/cua) installed and on PATH.
 
 ```bash
-pip install cua-harness
-```
-
-From source:
-
-```bash
-git clone https://github.com/anthropics/cua-harness.git
-cd cua-harness
 pip install -e .
 ```
 
 ## Quick Start
 
-### Heredoc CLI
+```python
+from cua_harness import ensure_daemon, launch_app, get_window_state, click, type_text
+
+ensure_daemon()
+
+# launch_app returns unwrapped result — pid/windows directly accessible
+result = launch_app(bundle_id='com.apple.finder')
+pid = result['pid']           # int, ready to use
+windows = result['windows']   # list of window dicts
+
+# get_window_state auto-selects visible window when window_id omitted
+state = get_window_state(pid, capture_mode='som')
+# state['app_skills'] surfaces learned helpers path if available
+
+click(pid, element_index=3)
+type_text(pid, "hello world")
+```
+
+## Macro Recording
+
+```python
+from cua_harness import start_macro, stop_macro, replay_macro
+
+start_macro()
+# ... perform operations ...
+trajectory = stop_macro('/tmp/my_macro.json')
+
+# replay at 2x speed
+replay_macro('/tmp/my_macro.json', speed=2.0)
+```
+
+## App Skills (Closed-Loop Learning)
+
+The harness learns from successful operations and persists knowledge as executable Python code.
+
+```
+agent-workspace/app-skills/
+  <bundle_id>/
+    helpers.py          # current callable functions
+    helpers.prev.py     # single previous version backup
+```
+
+**Lifecycle:**
+
+1. Agent explores an app via `get_window_state` + `click` / `type_text`
+2. Successful sequence saved: `save_app_skill(bundle_id, code, reason)`
+3. Next `get_window_state(pid)` auto-returns `app_skills` path in response
+4. Agent calls learned functions directly — skips LLM reasoning on known paths
+
+```python
+from cua_harness import save_app_skill, get_window_state
+
+# After discovering a reliable path, persist it:
+save_app_skill("com.apple.finder", """
+from cua_harness import get_window_state, click, press_key
+
+def open_folder(pid, folder_name):
+    state = get_window_state(pid, query=folder_name)
+    click(pid, element_index=0)
+""", reason="reliable sidebar navigation via AXOutline")
+
+# Next session — get_window_state returns app_skills path automatically
+state = get_window_state(pid)
+# state['app_skills'] = 'agent-workspace/app-skills/com.apple.finder/helpers.py'
+# In heredoc CLI mode, functions are auto-loaded into namespace
+```
+
+## CLI Usage
 
 ```bash
+# Execute Python with all helpers pre-imported
+echo 'print(get_screen_size())' | cua-harness
+
+# Heredoc mode
 cua-harness <<'PY'
 result = launch_app("com.apple.Safari")
 pid = result["pid"]
 state = get_window_state(pid, capture_mode="som")
 click(pid, element_index=5)
-type_text(pid, "hello world")
 PY
-```
 
-### Library
-
-```python
-from cua_harness import ensure_daemon, launch_app, get_window_state, click, type_text
-
-ensure_daemon()
-app = launch_app("com.apple.Safari")
-pid = app["pid"]
-state = get_window_state(pid)
-click(pid, element_index=3)
-type_text(pid, "search query")
+# Health check
+cua-harness --doctor
 ```
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│  Agent Code (heredoc / library / framework)     │
-└────────────────────┬────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────┐
-│  cua_harness.helpers                            │
-│  30+ tool wrappers: click, type_text, scroll…   │
-└────────────────────┬────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────┐
-│  cua_harness.session                            │
-│  Profiler · Macro Recorder · Dry-run Gate       │
-└────────────────────┬────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────┐
-│  cua_harness.client (Unix socket IPC)           │
-│  Line-delimited JSON protocol                   │
-└────────────────────┬────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────┐
-│  cua-driver daemon                              │
-│  macOS Accessibility + Screen Capture APIs       │
-└─────────────────────────────────────────────────┘
+run.py          CLI entrypoint, heredoc exec, auto-loads app-skills
+    │
+helpers.py      30+ tool wrappers (click, type_text, get_window_state...)
+    │
+session.py      Session singleton: profiler, macro, dry-run gate
+    │
+client.py       CuaClient — Unix socket, line-delimited JSON protocol
+    │
+cua-driver      macOS Accessibility + Screen Capture daemon
 ```
 
-## API Reference
-
-### App & Window
-
-| Function | Description |
-|----------|-------------|
-| `ensure_daemon()` | Start cua-driver daemon if not running |
-| `launch_app(bundle_id=, name=)` | Launch app by bundle ID or name |
-| `list_apps()` | List running applications |
-| `list_windows(pid)` | List windows for a process |
-| `get_window_state(pid, capture_mode="som")` | Get AX tree / screenshot. window_id optional (auto-selects visible window) |
-
-### Input
-
-| Function | Description |
-|----------|-------------|
-| `click(pid, element_index=, x=, y=, count=)` | Click element or coordinates |
-| `double_click(pid, element_index=)` | Double-click |
-| `right_click(pid, element_index=)` | Right-click |
-| `type_text(pid, text, delay_ms=)` | Type text into focused element |
-| `press_key(pid, key, modifiers=)` | Press keyboard key |
-| `hotkey(pid, keys)` | Press key combination |
-| `set_value(pid, window_id, element_index, value)` | Set element value directly |
-
-### Navigation
-
-| Function | Description |
-|----------|-------------|
-| `scroll(pid, direction, amount=3)` | Scroll in direction |
-| `drag(pid, from_x, from_y, to_x, to_y)` | Drag gesture |
-| `move_cursor(x, y)` | Move mouse cursor |
-| `get_cursor_position()` | Get current cursor position |
-| `get_screen_size(display_id=)` | Screen dimensions (multi-monitor) |
-| `zoom(pid, x, y, width, height)` | Capture zoomed region |
-
-### Observability
-
-| Function | Description |
-|----------|-------------|
-| `wait_for(predicate, timeout=10)` | Poll until condition met |
-| `ax_diff(before, after)` | Diff two AX tree snapshots |
-| `StateCapture(pid)` | Context manager for before/after diff |
-| `set_dry_run(enabled)` | Toggle dry-run mode |
-| `profile()` | Context manager for latency profiling |
-| `start_recording()` / `stop_recording(path=)` | Macro record |
-| `replay(path, speed=1.0)` | Replay recorded trajectory |
-
-### App Skills (Learning Loop)
-
-| Function | Description |
-|----------|-------------|
-| `save_app_skill(bundle_id, code, reason="")` | Persist learned Python helpers for an app |
-| `load_app_skills(bundle_id, ns)` | Load app's helpers.py into namespace |
-
-`get_window_state()` automatically returns `app_skills` path when a bundle has learned helpers. In heredoc CLI mode, all app-skills are auto-loaded into the namespace.
-
-## Examples
-
-### Wait for UI state
-
-```python
-from cua_harness import wait_for, get_window_state
-
-def dialog_appeared():
-    state = get_window_state(pid)
-    return any(e.get("role") == "dialog" for e in state.get("elements", []))
-
-wait_for(dialog_appeared, timeout=5, message="dialog did not appear")
-```
-
-### AX tree diff
-
-```python
-from cua_harness import get_window_state, ax_diff, click
-
-before = get_window_state(pid)
-click(pid, element_index=7)
-after = get_window_state(pid)
-
-diff = ax_diff(before, after)
-print(diff["summary"])  # "+2 -0 ~1"
-```
-
-### Macro record and replay
-
-```python
-from cua_harness import start_recording, stop_recording, replay, click, type_text
-
-start_recording()
-click(pid, element_index=3)
-type_text(pid, "automated input")
-stop_recording("my_macro.json")
-
-# Later:
-replay("my_macro.json", speed=2.0)
-```
-
-### Performance profiling
-
-```python
-from cua_harness import profile, click, get_window_state
-
-with profile() as p:
-    for i in range(10):
-        get_window_state(pid)
-        click(pid, element_index=i)
-# Prints: tool name, call count, avg/min/max latency
-```
-
-### Dry-run mode
-
-```python
-from cua_harness import set_dry_run, click, get_window_state
-
-set_dry_run(True)
-click(pid, element_index=5)       # logged to stderr, not executed
-get_window_state(pid)             # executes normally (read-only)
-set_dry_run(False)
-```
-
-### App skills — learn and reuse
-
-```python
-from cua_harness import save_app_skill, load_app_skills
-
-# After successfully automating Lark, persist the helpers:
-save_app_skill("com.electron.lark", """
-from cua_harness import get_window_state, click, set_value, press_key
-
-def open_messages(pid):
-    state = get_window_state(pid, query="消息")
-    click(pid, element_index=0)
-
-def send_message(pid, window_id, element_index, text):
-    set_value(pid, window_id, element_index, text)
-    press_key(pid, "Return")
-""", reason="learned message tab path via AXRadioButton")
-
-# In heredoc CLI mode, app-skills are auto-loaded — call directly:
-#   open_messages(pid)
-#   send_message(pid, wid, idx, "hello")
-#
-# In library mode, load manually:
-ns = {}
-load_app_skills("com.electron.lark", ns)
-ns["open_messages"](pid)
-ns["send_message"](pid, wid, idx, "hello")
-```
-
-Versioning: each save backs up the previous `helpers.py` as `helpers.YYYYMMDD.bak.py` (max 5 kept). Changes logged in `CHANGELOG.md` per bundle.
-
-## Comparison
-
-| Feature | cua-harness | pyautogui | osascript | Playwright |
-|---------|:-----------:|:---------:|:---------:|:----------:|
-| Accessibility tree | yes | no | partial | no (web only) |
-| Element-based targeting | yes | no | partial | yes (web) |
-| No foreground steal | yes | no | yes | n/a |
-| Multi-display | yes | partial | no | n/a |
-| Dry-run mode | yes | no | no | no |
-| Performance profiler | yes | no | no | yes |
-| Macro record/replay | yes | no | no | yes |
-| Agent-friendly API | yes | no | no | partial |
-| Platform | macOS | cross | macOS | cross (web) |
-
-## Permissions
-
-macOS requires Accessibility and Screen Recording permissions via TCC. Grant access to your terminal in System Settings > Privacy & Security.
-
-See [docs/macos-permissions.md](docs/macos-permissions.md) for detailed setup.
-
-## Contributing
-
-Issues and pull requests welcome.
+## Testing
 
 ```bash
-pip install -e .
 pytest
+
+# Single test
+pytest tests/test_helpers.py::test_client_call_raises_runtime_error_on_failure
 ```
+
+Tests mock at `cua_harness.helpers.get_session` — never connect to a real daemon.
 
 ## License
 
