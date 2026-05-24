@@ -39,9 +39,7 @@ class TestSurfaceAppSkills:
 
         from cua_harness.helpers import _surface_app_skills
 
-        result = {
-            "payload": {"structuredContent": {"bundle_id": bundle, "tree_markdown": "..."}}
-        }
+        result = {"bundle_id": bundle, "tree_markdown": "..."}
         out = _surface_app_skills(result)
 
         assert out["app_skills"] == str(skill_dir / "helpers.py")
@@ -49,7 +47,7 @@ class TestSurfaceAppSkills:
     def test_no_surfacing_when_no_dir(self, _patch_workspace):
         from cua_harness.helpers import _surface_app_skills
 
-        result = {"payload": {"structuredContent": {"bundle_id": "com.nonexistent.app"}}}
+        result = {"bundle_id": "com.nonexistent.app"}
         out = _surface_app_skills(result)
 
         assert "app_skills" not in out
@@ -57,7 +55,7 @@ class TestSurfaceAppSkills:
     def test_no_surfacing_without_bundle_id(self, _patch_workspace):
         from cua_harness.helpers import _surface_app_skills
 
-        result = {"payload": {"content": [{"text": "hello"}]}}
+        result = {"content": [{"text": "hello"}]}
         out = _surface_app_skills(result)
 
         assert "app_skills" not in out
@@ -71,7 +69,7 @@ class TestSurfaceAppSkills:
 
         from cua_harness.helpers import _surface_app_skills
 
-        result = {"payload": {"structuredContent": {"bundle_id": bundle}}}
+        result = {"bundle_id": bundle}
         out = _surface_app_skills(result)
 
         assert "app_skills" not in out

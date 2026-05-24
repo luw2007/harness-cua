@@ -34,8 +34,15 @@ def _tmp_png() -> str:
 
 def _cua(tool: str, *, screenshot_out: str | None = None, **kwargs) -> dict:
     if screenshot_out:
-        return get_session().call(tool, screenshot_out=screenshot_out, **kwargs)
-    return get_session().call(tool, **kwargs)
+        raw = get_session().call(tool, screenshot_out=screenshot_out, **kwargs)
+    else:
+        raw = get_session().call(tool, **kwargs)
+    # Unwrap cua-driver envelope: {kind, payload: {structuredContent: {...}}}
+    if isinstance(raw, dict):
+        sc = raw.get("payload", {}).get("structuredContent") if isinstance(raw.get("payload"), dict) else None
+        if isinstance(sc, dict):
+            return sc
+    return raw
 
 
 def check_permissions(**kwargs) -> dict:
@@ -95,6 +102,17 @@ def list_windows(pid: int) -> dict:
     return _surface_app_skills(_cua("list_windows", pid=pid))
 
 
+def _pick_window_id(pid: int) -> int | None:
+    result = _cua("list_windows", pid=pid)
+    windows = result.get("windows", [])
+    visible = [w for w in windows if w.get("is_on_screen") and w.get("on_current_space")]
+    if not visible:
+        visible = [w for w in windows if w.get("on_current_space")]
+    if not visible:
+        visible = windows
+    return visible[0]["window_id"] if visible else None
+
+
 def get_window_state(
     pid: int,
     window_id: int | None = None,
@@ -102,6 +120,8 @@ def get_window_state(
     query: str | None = None,
 ) -> dict:
     kwargs: dict = {"pid": pid, "capture_mode": capture_mode}
+    if window_id is None:
+        window_id = _pick_window_id(pid)
     if window_id is not None:
         kwargs["window_id"] = window_id
     if query is not None:
@@ -334,9 +354,8 @@ def replay_trajectory(dir: str) -> dict:
 
 
 def _extract_bundle_id(result: dict) -> str | None:
-    sc = result.get("payload", {}).get("structuredContent")
-    if isinstance(sc, dict):
-        return sc.get("bundle_id")
+    if isinstance(result, dict):
+        return result.get("bundle_id")
     return None
 
 

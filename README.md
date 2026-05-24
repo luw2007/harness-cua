@@ -87,7 +87,7 @@ type_text(pid, "search query")
 | `launch_app(bundle_id=, name=)` | Launch app by bundle ID or name |
 | `list_apps()` | List running applications |
 | `list_windows(pid)` | List windows for a process |
-| `get_window_state(pid, capture_mode="som")` | Get AX tree / screenshot |
+| `get_window_state(pid, capture_mode="som")` | Get AX tree / screenshot. window_id optional (auto-selects visible window) |
 
 ### Input
 
@@ -246,7 +246,7 @@ Versioning: each save backs up the previous `helpers.py` as `helpers.YYYYMMDD.ba
 
 macOS requires Accessibility and Screen Recording permissions via TCC. Grant access to your terminal in System Settings > Privacy & Security.
 
-See [docs/tcc-permissions.md](docs/tcc-permissions.md) for detailed setup.
+See [docs/macos-permissions.md](docs/macos-permissions.md) for detailed setup.
 
 ## Contributing
 
