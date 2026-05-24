@@ -56,6 +56,9 @@ from cua_harness.helpers import (  # noqa: E402
     get_recording_state,
     get_agent_cursor_state,
     replay_trajectory,
+    start_macro,
+    stop_macro,
+    replay_macro,
 )
 from cua_harness.wait import wait_for  # noqa: E402
 from cua_harness.diff import ax_diff, StateCapture  # noqa: E402
@@ -100,6 +103,9 @@ __all__ = [
     "get_recording_state",
     "get_agent_cursor_state",
     "replay_trajectory",
+    "start_macro",
+    "stop_macro",
+    "replay_macro",
     "wait_for",
     "ax_diff",
     "StateCapture",

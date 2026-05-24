@@ -350,6 +350,21 @@ def replay_trajectory(dir: str) -> dict:
     return _cua("replay_trajectory", dir=dir)
 
 
+# --- Macro convenience (Python-level recording via Session) ---
+
+
+def start_macro() -> None:
+    get_session().start_recording()
+
+
+def stop_macro(output_path: str | None = None) -> list[dict]:
+    return get_session().stop_recording(output_path)
+
+
+def replay_macro(path: str, speed: float = 1.0) -> list[dict]:
+    return get_session().replay(path, speed)
+
+
 # --- App skills surfacing and persistence ---
 
 

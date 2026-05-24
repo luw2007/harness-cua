@@ -44,9 +44,11 @@ class Session:
         if self._recording:
             self._trajectory.append({
                 "t": round(time.monotonic() - self._rec_start, 3),
+                "timestamp": time.time(),
                 "tool": tool,
                 "args": kwargs,
                 "result": result,
+                "elapsed_ms": round(elapsed_ms, 1),
             })
 
         if screenshot_out and Path(screenshot_out).exists():
