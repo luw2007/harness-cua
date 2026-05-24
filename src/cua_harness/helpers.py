@@ -128,7 +128,10 @@ def get_window_state(
         kwargs["query"] = query
     needs_image = capture_mode in ("vision", "screenshot")
     out_file = _tmp_png() if needs_image else None
-    return _surface_app_skills(_cua("get_window_state", screenshot_out=out_file, **kwargs))
+    result = _surface_app_skills(_cua("get_window_state", screenshot_out=out_file, **kwargs))
+    if window_id is not None and "window_id" not in result:
+        result["window_id"] = window_id
+    return result
 
 
 def click(

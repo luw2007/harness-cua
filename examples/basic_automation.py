@@ -34,7 +34,8 @@ def main():
     # 3. Window state (auto-selects window_id)
     print("3. Getting window state...")
     state = get_window_state(pid, capture_mode="som")
-    print(f"   Elements: {state.get('element_count', '?')}")
+    window_id = state.get("window_id")
+    print(f"   Elements: {state.get('element_count', '?')}, window_id={window_id}")
 
     # 4. Type some text
     print("4. Typing text...")
@@ -52,8 +53,8 @@ def main():
 
     # 6. Screenshot
     print("6. Taking screenshot...")
-    img = screenshot(pid)
-    print(f"   Screenshot: {img}")
+    img = screenshot(pid, window_id=window_id)
+    print(f"   Screenshot: {img.get('image_path', img)}")
 
     print("Done.")
 
