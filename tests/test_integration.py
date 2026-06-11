@@ -2,9 +2,7 @@
 
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from cua_harness.session import Session
 
@@ -20,7 +18,7 @@ def _mock_session(dry_run: bool = False) -> Session:
 
 class TestLangChainToolsAdapter:
     def test_builds_tools(self):
-        from langchain_tools import build_cua_tools, Tool
+        from langchain_tools import Tool, build_cua_tools
         tools = build_cua_tools()
         assert len(tools) == 11
         for t in tools:

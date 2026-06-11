@@ -9,10 +9,10 @@ Demonstrates:
 """
 
 from cua_harness import (
-    launch_app,
-    get_window_state,
     click,
+    get_window_state,
     hotkey,
+    launch_app,
     screenshot,
 )
 

@@ -5,9 +5,8 @@ import sys
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
 
-from cua_harness.client import CuaClient, SOCKET_PATH
+from cua_harness.client import SOCKET_PATH, CuaClient
 from cua_harness.profiler import Profiler, ToolStats  # noqa: F401
 
 MUTATION_TOOLS = frozenset({

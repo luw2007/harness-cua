@@ -1,12 +1,12 @@
 """Tests for 0.2.0 features: wait_for, get_screen_size(display_id), ax_diff."""
 
 import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from cua_harness.diff import ax_diff
 from cua_harness.wait import wait_for
-from cua_harness.diff import ax_diff, StateCapture
 
 
 class TestWaitFor:
@@ -106,7 +106,6 @@ class TestAxDiff:
 class TestGetScreenSizeMultiDisplay:
     def test_no_display_id(self):
         from cua_harness.helpers import get_screen_size
-        from unittest.mock import MagicMock
         from cua_harness.session import Session
 
         mock_session = MagicMock(spec=Session)
@@ -119,7 +118,6 @@ class TestGetScreenSizeMultiDisplay:
 
     def test_with_display_id(self):
         from cua_harness.helpers import get_screen_size
-        from unittest.mock import MagicMock
         from cua_harness.session import Session
 
         mock_session = MagicMock(spec=Session)

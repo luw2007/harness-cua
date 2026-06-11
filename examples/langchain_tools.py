@@ -9,7 +9,7 @@ Agent frameworks can import these Tool objects directly.
 """
 
 from dataclasses import dataclass, field
-from typing import Callable, Any
+from typing import Any, Callable
 
 
 @dataclass
@@ -30,17 +30,17 @@ class Tool:
 def build_cua_tools() -> list[Tool]:
     """Build a tool registry from cua-harness exports."""
     from cua_harness import (
+        click,
+        get_screen_size,
+        get_window_state,
         launch_app,
         list_windows,
-        get_window_state,
-        click,
-        type_text,
         press_key,
-        scroll,
         screenshot,
-        get_screen_size,
-        wait_for,
+        scroll,
         set_dry_run,
+        type_text,
+        wait_for,
     )
 
     return [

@@ -5,13 +5,13 @@ import json
 import time
 
 from cua_harness import (
+    click,
     ensure_daemon,
+    get_window_state,
     launch_app,
+    replay_macro,
     start_macro,
     stop_macro,
-    replay_macro,
-    click,
-    get_window_state,
 )
 
 MACRO_PATH = "/tmp/calc_macro.json"

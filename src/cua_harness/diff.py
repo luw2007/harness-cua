@@ -1,6 +1,5 @@
 """AX tree diff: compare two get_window_state snapshots."""
 
-from typing import Any
 
 
 def _index_elements(state: dict) -> dict[int, dict]:

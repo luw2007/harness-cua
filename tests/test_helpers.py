@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -30,7 +30,7 @@ def test_client_call_returns_result_on_success():
 
 
 def test_tmp_png_tracked_for_cleanup():
-    from cua_harness.helpers import _tmp_png, _tmp_files
+    from cua_harness.helpers import _tmp_files, _tmp_png
 
     before = len(_tmp_files)
     path = _tmp_png()
@@ -67,8 +67,9 @@ def test_ensure_daemon_surfaces_stderr_on_timeout():
 
 
 def test_ensure_daemon_retries_on_address_in_use():
-    from cua_harness.client import ensure_daemon
     from pathlib import Path
+
+    from cua_harness.client import ensure_daemon
 
     call_count = {"popen": 0}
 
@@ -100,7 +101,7 @@ def test_ensure_daemon_skips_when_alive():
 
 
 def test_kill_daemon_removes_stale_socket():
-    from cua_harness.client import kill_daemon, SOCKET_PATH
+    from cua_harness.client import SOCKET_PATH, kill_daemon
 
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".sock")
     tmp.close()

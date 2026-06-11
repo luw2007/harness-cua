@@ -7,14 +7,15 @@
 #     PY
 
 import time
+
 from cua_harness import (
-    get_screen_size,
-    launch_app,
-    get_window_state,
     click,
-    type_text,
+    get_screen_size,
+    get_window_state,
     hotkey,
+    launch_app,
     screenshot,
+    type_text,
 )
 
 

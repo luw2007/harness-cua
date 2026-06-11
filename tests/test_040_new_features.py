@@ -1,9 +1,8 @@
 """Tests for new features: structuredContent unwrap, auto window selection, app_skills surfacing, macros."""
 
 import json
-import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import call, patch
 
 import pytest
 
@@ -150,7 +149,7 @@ class TestGetWindowStateAutoSelect:
         set_default_session(mock_session)
         from cua_harness.helpers import get_window_state
 
-        result = get_window_state(pid=100)
+        get_window_state(pid=100)
         assert call_count["n"] == 2
         # Verify the second call (get_window_state) received window_id=42
         second_call_args = mock_session.client.call.call_args_list[1]

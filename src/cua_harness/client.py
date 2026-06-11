@@ -1,9 +1,9 @@
 """Unix socket client for cua-driver daemon. Line-delimited JSON protocol."""
 
 import json
+import shutil
 import socket
 import subprocess
-import shutil
 import sys
 import time
 from pathlib import Path

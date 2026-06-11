@@ -1,14 +1,14 @@
 """App Skills closed-loop learning lifecycle demo."""
 
 from cua_harness import (
-    ensure_daemon,
-    launch_app,
-    get_window_state,
     click,
-    type_text,
+    ensure_daemon,
+    get_window_state,
+    launch_app,
+    load_app_skills,
     press_key,
     save_app_skill,
-    load_app_skills,
+    type_text,
 )
 
 BUNDLE = "com.apple.Notes"

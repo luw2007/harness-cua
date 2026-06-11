@@ -20,49 +20,60 @@ Subcommands:
   --reload    Reload agent_helpers.py
 """
 
-from cua_harness.session import (  # noqa: E402
-    Session, get_session, set_default_session,
-    set_dry_run, is_dry_run, profile, get_profiler,
+from cua_harness.client import (  # noqa: E402
+    CuaClient,
+    daemon_alive,
+    ensure_daemon,
+    get_client,
+    kill_daemon,
 )
-from cua_harness.client import ensure_daemon, daemon_alive, get_client, CuaClient, kill_daemon  # noqa: E402
+from cua_harness.diff import StateCapture, ax_diff  # noqa: E402
 from cua_harness.helpers import (  # noqa: E402
+    app_info,
     check_permissions,
-    launch_app,
-    list_windows,
-    get_window_state,
     click,
     double_click,
-    right_click,
     drag,
-    type_text,
-    set_value,
-    press_key,
-    hotkey,
-    scroll,
-    screenshot,
-    move_cursor,
+    get_agent_cursor_state,
+    get_config,
     get_cursor_position,
+    get_recording_state,
     get_screen_size,
-    zoom,
-    page,
+    get_window_state,
+    hotkey,
+    launch_app,
     list_apps,
-    app_info,
-    save_app_skill,
+    list_windows,
     load_app_skills,
+    move_cursor,
+    page,
+    press_key,
+    replay_macro,
+    replay_trajectory,
+    right_click,
+    save_app_skill,
+    screenshot,
+    scroll,
+    set_agent_cursor_enabled,
     set_config,
     set_recording,
-    set_agent_cursor_enabled,
-    get_config,
-    get_recording_state,
-    get_agent_cursor_state,
-    replay_trajectory,
+    set_value,
     start_macro,
     stop_macro,
-    replay_macro,
+    type_text,
+    zoom,
+)
+from cua_harness.profiler import Profiler  # noqa: E402
+from cua_harness.session import (  # noqa: E402
+    Session,
+    get_profiler,
+    get_session,
+    is_dry_run,
+    profile,
+    set_default_session,
+    set_dry_run,
 )
 from cua_harness.wait import wait_for  # noqa: E402
-from cua_harness.diff import ax_diff, StateCapture  # noqa: E402
-from cua_harness.profiler import Profiler  # noqa: E402
 
 __all__ = [
     "Session",

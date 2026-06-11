@@ -1,7 +1,7 @@
 """Polling helper for waiting on GUI state changes."""
 
 import time
-from typing import Callable, Any
+from typing import Any, Callable
 
 
 def wait_for(

@@ -20,17 +20,16 @@ Or as a library:
 """
 
 from cua_harness import (
+    ax_diff,
     ensure_daemon,
+    get_window_state,
+    is_dry_run,
     launch_app,
     list_windows,
-    get_window_state,
-    click,
+    profile,
+    set_dry_run,
     type_text,
     wait_for,
-    ax_diff,
-    set_dry_run,
-    is_dry_run,
-    profile,
 )
 
 
@@ -40,7 +39,7 @@ def run_agent(bundle_id: str = "com.apple.TextEdit", dry_run: bool = True):
     ensure_daemon()
     set_dry_run(dry_run)
 
-    with profile() as p:
+    with profile():
         # 1. Launch the target app
         app = launch_app(bundle_id=bundle_id)
         pid = app.get("pid") or app.get("process_id")
