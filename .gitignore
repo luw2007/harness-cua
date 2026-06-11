@@ -9,3 +9,6 @@ build/
 .omc/
 src/cua_harness.egg-info/
 agent-workspace/__pycache__/
+.claude/
+.hive/
+agent-workspace/app-skills/
