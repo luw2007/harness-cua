@@ -77,7 +77,6 @@ class TestSurfaceAppSkills:
 
 class TestSaveAppSkill:
     def test_creates_helpers_py(self, _patch_workspace):
-        ws = _patch_workspace
         from cua_harness.helpers import save_app_skill
 
         path = save_app_skill("com.test.app", SAMPLE_CODE, reason="initial")
@@ -144,3 +143,52 @@ class TestLoadAppSkills:
         loaded = load_app_skills("com.nonexistent", ns)
         assert loaded is False
         assert ns == {}
+
+
+class TestSaveAppSkillValidation:
+    def test_invalid_code_raises_and_writes_nothing(self, _patch_workspace):
+        from cua_harness.helpers import save_app_skill
+        ws = _patch_workspace
+        bundle = "com.apple.finder"
+        with pytest.raises(ValueError):
+            save_app_skill(bundle, "def broken(:\n    pass")
+        skill_dir = ws / "app-skills" / bundle
+        assert not (skill_dir / "helpers.py").exists()
+        assert not (skill_dir / "helpers.prev.py").exists()
+
+    def test_invalid_code_does_not_rotate_existing(self, _patch_workspace):
+        from cua_harness.helpers import save_app_skill
+        ws = _patch_workspace
+        bundle = "com.apple.finder"
+        skill_dir = ws / "app-skills" / bundle
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "helpers.py").write_text("def good(): pass")
+        with pytest.raises(ValueError):
+            save_app_skill(bundle, "this is not python !!!")
+        assert (skill_dir / "helpers.py").read_text() == "def good(): pass"
+        assert not (skill_dir / "helpers.prev.py").exists()
+
+    def test_invalid_multiline_reason_does_not_rotate_existing(self, _patch_workspace):
+        from cua_harness.helpers import save_app_skill
+        ws = _patch_workspace
+        bundle = "com.apple.finder"
+        skill_dir = ws / "app-skills" / bundle
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "helpers.py").write_text("def good(): pass")
+        reason = "adds ok\nthis line must not become executable"
+        save_app_skill(bundle, "def ok(): pass", reason=reason)
+        written = (skill_dir / "helpers.py").read_text()
+        assert "\n# " not in written
+        assert written.startswith("# reason: adds ok this line must not become executable")
+        assert "def ok(): pass" in written
+        assert (skill_dir / "helpers.prev.py").read_text() == "def good(): pass"
+
+    def test_valid_code_still_writes(self, _patch_workspace):
+        from cua_harness.helpers import save_app_skill
+        ws = _patch_workspace
+        bundle = "com.apple.finder"
+        path = save_app_skill(bundle, "def ok(): pass", reason="works")
+        written = (ws / "app-skills" / bundle / "helpers.py").read_text()
+        assert "def ok(): pass" in written
+        assert "# reason: works" in written
+        assert path.endswith("helpers.py")

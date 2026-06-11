@@ -392,7 +392,6 @@ def _surface_app_skills(result: dict) -> dict:
 
 def load_app_skills(bundle_id: str, ns: dict) -> bool:
     """Load app-skills/<bundle_id>/helpers.py into the given namespace. Returns True if loaded."""
-    import functools
     import importlib.util
     skills_dir = AGENT_WORKSPACE / "app-skills" / bundle_id
     helpers_file = skills_dir / "helpers.py"
@@ -421,13 +420,24 @@ def _wrap_with_fallback(fn, bundle_id, name):
         except Exception as e:
             import sys
             print(f"[app-skill fallback] {bundle_id}.{name}() failed: {e}", file=sys.stderr)
-            print(f"[app-skill fallback] skill may be outdated — consider re-recording", file=sys.stderr)
+            print("[app-skill fallback] skill may be outdated — consider re-recording", file=sys.stderr)
             return None
     return wrapper
 
 
 def save_app_skill(bundle_id: str, code: str, reason: str = "") -> str:
     """Persist a learned app skill as Python code. Keeps one .prev.py backup."""
+    header = ""
+    if reason:
+        # collapse newlines so a multi-line reason cannot inject code
+        header = "# reason: " + reason.replace("\n", " ") + "\n"
+    final_text = header + code
+
+    try:
+        compile(final_text, "<app-skill>", "exec")
+    except SyntaxError as e:
+        raise ValueError(f"invalid app-skill code: {e}") from e
+
     skills_dir = AGENT_WORKSPACE / "app-skills" / bundle_id
     skills_dir.mkdir(parents=True, exist_ok=True)
     helpers_file = skills_dir / "helpers.py"
@@ -436,8 +446,7 @@ def save_app_skill(bundle_id: str, code: str, reason: str = "") -> str:
         prev = skills_dir / "helpers.prev.py"
         prev.write_bytes(helpers_file.read_bytes())
 
-    header = f"# reason: {reason}\n" if reason else ""
-    helpers_file.write_text(header + code)
+    helpers_file.write_text(final_text)
 
     return str(helpers_file)
 
