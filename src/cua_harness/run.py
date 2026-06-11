@@ -1,12 +1,12 @@
 """Entry point: read stdin heredoc, ensure daemon, exec code."""
 
+import importlib.util
 import sys
 import traceback
-import importlib.util
 from pathlib import Path
 
-from cua_harness import __version__, USAGE, __all__
 import cua_harness
+from cua_harness import USAGE, __all__, __version__
 from cua_harness.client import ensure_daemon, kill_daemon
 from cua_harness.helpers import AGENT_WORKSPACE, load_app_skills
 
@@ -58,7 +58,7 @@ def _doctor() -> None:
         print("Start daemon with: cua-driver serve")
         sys.exit(1)
     except FileNotFoundError:
-        print("cua-driver not found. Install: brew install anthropics/tap/cua-driver")
+        print("cua-driver not found. Install: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/trycua/cua/main/libs/cua-driver/scripts/install.sh)\"")
         sys.exit(1)
 
 

@@ -5,7 +5,7 @@
 1. **cua-driver** installed and on PATH:
    ```bash
    which cua-driver  # should resolve
-   cua-driver status '{}'  # should respond
+   cua-harness --doctor  # should report cua-driver reachable
    ```
 
 2. **macOS permissions** granted to cua-driver:
@@ -15,6 +15,10 @@
 3. **Python 3.11+** available
 
 ## Install
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/trycua/cua/main/libs/cua-driver/scripts/install.sh)"
+```
 
 ```bash
 cd /path/to/harness-cua

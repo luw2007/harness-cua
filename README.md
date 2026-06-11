@@ -12,6 +12,14 @@ macOS-only Python SDK wrapping [cua-driver](https://github.com/trycua/cua) for A
 
 Prerequisites: [cua-driver](https://github.com/trycua/cua) installed and on PATH.
 
+Install cua-driver (macOS):
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/trycua/cua/main/libs/cua-driver/scripts/install.sh)"
+# verify
+which cua-driver
+cua-harness --doctor
+```
+
 ```bash
 pip install -e .
 ```
@@ -127,6 +135,16 @@ pytest tests/test_helpers.py::test_client_call_raises_runtime_error_on_failure
 ```
 
 Tests mock at `cua_harness.helpers.get_session` — never connect to a real daemon.
+
+## Security model
+
+cua-harness executes arbitrary Python by design:
+
+- The CLI reads code from stdin (heredoc) and `exec`s it with all helpers pre-imported.
+- It auto-loads `agent-workspace/agent_helpers.py` from the current working directory if present.
+- It auto-loads every `agent-workspace/app-skills/<bundle_id>/helpers.py` from the current working directory into the exec namespace.
+
+All three are arbitrary code execution paths. Do not run `cua-harness` inside an untrusted directory — a malicious `agent_helpers.py` or app-skill `helpers.py` will execute with your privileges. Treat any cloned repo's `agent-workspace/` as untrusted code until reviewed.
 
 ## License
 

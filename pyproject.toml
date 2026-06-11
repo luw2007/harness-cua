@@ -19,9 +19,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/anthropics/cua-harness"
-Repository = "https://github.com/anthropics/cua-harness"
-Issues = "https://github.com/anthropics/cua-harness/issues"
+Homepage = "https://github.com/luw2007/harness-cua"
+Repository = "https://github.com/luw2007/harness-cua"
+Issues = "https://github.com/luw2007/harness-cua/issues"
 
 [project.scripts]
 cua-harness = "cua_harness.run:main"
